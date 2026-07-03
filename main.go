@@ -31,7 +31,7 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	cfg.fileserverHits.Store(0)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK\n"))
+	fmt.Fprintf(w, "Number of hits has been reset to %d\n", cfg.fileserverHits.Load())
 }
 
 func main() {
