@@ -4,20 +4,29 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/Pakar040/chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body string `json:"body"`
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 	type returnVals struct {
-		CleanedBody string `json:"cleaned_body"`
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body      string    `json:"body"`
+		UserID    uuid.UUID `json:"user_id"`
 	}
 
 	params := parameters{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
-		respondWithError(w, 500, "Something went wrong", err)
+		respondWithError(w, 500, "Error decoding request", err)
 		return
 	}
 
@@ -26,15 +35,28 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wordsToClean := map[string]struct{}{
+	badWords := map[string]struct{}{
 		"kerfuffle": {},
 		"sharbert":  {},
 		"fornax":    {},
 	}
-	cleanedBody := cleanMessage(params.Body, wordsToClean)
+	cleanedBody := cleanMessage(params.Body, badWords)
 
-	respondWithJSON(w, 200, returnVals{
-		CleanedBody: cleanedBody,
+	createdChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
+		Body:   cleanedBody,
+		UserID: params.UserID,
+	})
+	if err != nil {
+		respondWithError(w, 500, "Failed to create chirp in database", err)
+		return
+	}
+
+	respondWithJSON(w, 201, returnVals{
+		ID: createdChirp.ID,
+		CreatedAt: createdChirp.CreatedAt,
+		UpdatedAt: createdChirp.UpdatedAt,
+		Body: createdChirp.Body,
+		UserID: createdChirp.UserID,
 	})
 }
 
