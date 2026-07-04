@@ -22,25 +22,23 @@ type apiConfig struct {
 	db             *database.Queries
 }
 
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits.Add(1)
-		next.ServeHTTP(w, r)
-	})
-}
-
 func main() {
 	godotenv.Load()
+
 	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must have value")
+	}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Printf("Error connecting to database: %v", err)
+		log.Fatalf("Error connecting to database: %s", err)
 	}
 	dbQueries := database.New(db)
 
 	apiCfg := apiConfig{
-		db: dbQueries,
+		fileserverHits: atomic.Int32{},
+		db:             dbQueries,
 	}
 
 	mux := http.NewServeMux()
@@ -59,10 +57,4 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func handlerHealthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK\n"))
 }
