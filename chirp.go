@@ -97,3 +97,33 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, 200, allReturnVals)
 }
+
+func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
+	type returnVals struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body      string    `json:"body"`
+		UserID    uuid.UUID `json:"user_id"`
+	}
+
+	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, 500, "Path value could not be parsed to UUID", nil)
+		return
+	}
+
+	chirp, err := cfg.db.GetChirpById(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, 404, "Failed to retrieve chirp from database", err)
+		return
+	}
+
+	respondWithJSON(w, 200, returnVals{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	})
+}
