@@ -32,6 +32,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	hash, err := auth.HashPassword(params.Password)
 	if err != nil {
 		respondWithError(w, 500, "Failed to hash password", err)
+		return
 	}
 
 	createdUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
@@ -112,5 +113,60 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Email:        user.Email,
 		Token:        token,
 		RefreshToken: refreshToken.Token,
+	})
+}
+
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	type returnVals struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	if err := decoder.Decode(&params); err != nil {
+		respondWithError(w, 500, "Could not decode request", err)
+		return
+	}
+
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Token not provided in Authorization header", err)
+		return
+	}
+
+	id, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, 401, "Not authorized to make this request", nil)
+		return
+	}
+
+	hash, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, 500, "Failed to hash password", err)
+		return
+	}
+
+	updatedUser, err := cfg.db.UpdateUserEmailAndPassword(r.Context(), database.UpdateUserEmailAndPasswordParams{
+		ID:             id,
+		Email:          params.Email,
+		HashedPassword: hash,
+	})
+	if err != nil {
+		respondWithError(w, 500, "Failed to update email and password", err)
+		return
+	}
+
+	respondWithJSON(w, 200, returnVals{
+		ID:        updatedUser.ID,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAt: updatedUser.UpdatedAt,
+		Email:     updatedUser.Email,
 	})
 }
