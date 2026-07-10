@@ -91,7 +91,16 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		UserID    uuid.UUID `json:"user_id"`
 	}
 
-	chirps, err := cfg.db.GetChirps(r.Context())
+	authorIdStr := r.URL.Query().Get("author_id")
+	authorId, authorIdErr := uuid.Parse(authorIdStr)
+
+	var err error
+	var chirps []database.Chirp
+	if authorIdErr != nil {
+		chirps, err = cfg.db.GetChirps(r.Context())
+	} else {
+		chirps, err = cfg.db.GetChirpsByAuthorId(r.Context(), authorId)
+	}
 	if err != nil {
 		respondWithError(w, 500, "Error retreiving chirps from database", err)
 		return
