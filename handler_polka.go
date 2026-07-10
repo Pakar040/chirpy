@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Pakar040/chirpy/internal/auth"
 	"github.com/Pakar040/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -23,12 +24,18 @@ func (cfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil || apiKey != cfg.polkaApiKey {
+		respondWithError(w, 401, "Not authorized", err)
+		return
+	}
+
 	if params.Event != "user.upgraded" {
 		w.WriteHeader(204)
 		return
 	}
 
-	_, err := cfg.db.UpdateUserIsChirpyRed(r.Context(), database.UpdateUserIsChirpyRedParams{
+	_, err = cfg.db.UpdateUserIsChirpyRed(r.Context(), database.UpdateUserIsChirpyRedParams{
 		ID:          params.Data.UserID,
 		IsChirpyRed: true,
 	})
