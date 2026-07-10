@@ -152,7 +152,7 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, 403, "Not authorized to make this request", nil)
 		return
 	}
-	
+
 	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
 		respondWithError(w, 500, "Path value could not be parsed to UUID", nil)
