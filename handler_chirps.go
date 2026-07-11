@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -104,6 +105,11 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, 500, "Error retreiving chirps from database", err)
 		return
+	}
+
+	sortStr := r.URL.Query().Get("sort")
+	if sortStr == "desc" {
+		slices.Reverse(chirps)
 	}
 
 	allReturnVals := make([]returnVals, len(chirps))
